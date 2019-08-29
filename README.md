@@ -65,8 +65,8 @@ Dispatch calls are in the following form, and support chaining of indirection.
 ```cpp
 template <typename THandler, 		// The handler. THandler::onRead will be called, passing the context.
 	typename TIndirection = Direct, // The sequence necessary to derive the value.
-	bool seekBack = true, 			// Whether or not the reader should be restored to the end of the first indirection jump.
-	typename TContext> 				// Type of value to pass to handler.
+	bool seekBack = true, 		// Whether or not the reader should be restored to the end of the first indirection jump.
+	typename TContext> 		// Type of value to pass to handler.
 void dispatch(TContext& ctx, /* ... */);
 ```
 
@@ -74,9 +74,9 @@ void dispatch(TContext& ctx, /* ... */);
 
 Indirections take the following form:
 ```cpp
-template<int ITrans=0, 								// The translation of the pointer at this level. For example, specifying 4 would advance four bytes.
-	typename TPointer = Indirection_None, 			// If this is an offset/pointer, the type of that pointer.
-	Whence WPointer = Whence::Current, 				// Relation of the pointer offset.
+template<int ITrans=0, 					// The translation of the pointer at this level. For example, specifying 4 would advance four bytes.
+	typename TPointer = Indirection_None,   	// If this is an offset/pointer, the type of that pointer.
+	Whence WPointer = Whence::Current, 		// Relation of the pointer offset.
 	typename IndirectionNext = Indirection_None> 	// The next indirection. Chaining is supported.
 	struct Indirection;
 ```
@@ -87,8 +87,8 @@ We can intuitively express this with an indirection.
 ```cpp
 reader.dispatch<BufferReader<Triangle>,
 	Indirection<
-		0, 					// Offset of pointer is not translated
-		s32, 				// Offset is a signed 32 bit integer
+		0, 			// Offset of pointer is not translated
+		s32, 			// Offset is a signed 32 bit integer
 		Whence::Set, 		// Seek from the start of file
 		Indirection<-0x10> 	// Next indirection -- after jumped to pointer, go back 16 bytes.
 	>>(mTriBuffer);
