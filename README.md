@@ -60,7 +60,7 @@ void readFile(BinaryReader& reader, DecodedFile& file)
 	reader.dispatch<Section2Handler, Indirection<0, s32, Whence::Set>>(file.section2);
 	// Continue to read other data
 }
-
+```
 Dispatch calls are in the following form, and support chaining of indirection.
 ```cpp
 template <typename THandler, 		// The handler. THandler::onRead will be called, passing the context.
