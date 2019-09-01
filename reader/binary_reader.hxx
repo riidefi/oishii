@@ -224,7 +224,7 @@ inline T BinaryReader::endianDecode(T val) const noexcept
 		break;
 	}
 
-	if (Options::PLATFORM_LE)
+	if (!Options::PLATFORM_LE)
 		be = !be;
 
 	return be ? swapEndian<T>(val) : val;
@@ -234,15 +234,20 @@ inline T BinaryReader::endianDecode(T val) const noexcept
 template <typename T, EndianSelect E>
 T BinaryReader::peek()
 {
-#if DO_BOUNDS_CHECK == 1
-	if (tell() + sizeof(T) > endpos())
+	if (Options::DO_BOUNDS_CHECK && tell() + sizeof(T) > endpos())
 	{
 		// Fatal invalidity -- out of space
 		//throw "FATAL: TODO";
 
 		return T{};
 	}
-#endif
+
+	if (Options::ALIGNMENT_CHECK && tell() % sizeof(T))
+	{
+		// TODO: Filter warnings in same scope, only print stack once.
+		warnAt((std::string("Alignment error: ") + std::to_string(tell()) + " is not " + std::to_string(sizeof(T)) + " byte aligned.").c_str(), tell(), tell() + sizeof(T), true);
+	}
+
 	T decoded = endianDecode<T, E>(*reinterpret_cast<T*>(getStreamStart() + tell()));
 	
 	return decoded;
