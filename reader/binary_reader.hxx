@@ -206,9 +206,8 @@ struct DebugExpectSized
 template <typename T, EndianSelect E>
 inline T BinaryReader::endianDecode(T val) const noexcept
 {
-#if MULTIENDIAN_SUPPORT == 0
-	return val;
-#else
+	if (!Options::MULTIENDIAN_SUPPORT)
+		return val;
 
 	bool be = false;
 
@@ -225,14 +224,11 @@ inline T BinaryReader::endianDecode(T val) const noexcept
 		break;
 	}
 
-	return
-#if PLATFORM_LE == 0
-		!
-#endif
-		be ?
+	if (Options::PLATFORM_LE)
+		be = !be;
 
-		swapEndian<T>(val) : val;
-#endif
+	return be ? swapEndian<T>(val) : val;
+
 }
 
 template <typename T, EndianSelect E>
@@ -262,15 +258,14 @@ T BinaryReader::read()
 template <typename T, EndianSelect E>
 T BinaryReader::peekAt(int trans)
 {
-#if DO_BOUNDS_CHECK == 1
-	if (tell() + sizeof(T) > endpos())
+	if (Options::DO_BOUNDS_CHECK && tell() + sizeof(T) > endpos())
 	{
 		// Fatal invalidity -- out of space
 		//throw "FATAL: TODO";
 
 		return T{};
 	}
-#endif
+
 	T decoded = endianDecode<T, E>(*reinterpret_cast<T*>(getStreamStart() + tell() + trans));
 
 	return decoded;

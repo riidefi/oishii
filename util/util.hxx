@@ -102,7 +102,7 @@ static inline u16 swap16(u16 v);
 					  ((v & 0x0000ff00) <<  8) | \
 					  ((v & 0x000000ff) << 24) )
 
-#if PLATFORM_LE == 1
+#if OISHII_PLATFORM_LE == 1
 #define MAKE_BE32(x) _BSWAP_32(x)
 #define MAKE_LE32(x) x
 #else

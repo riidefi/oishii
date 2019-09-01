@@ -77,9 +77,8 @@ public:
 	template <typename T, EndianSelect E>
 	inline T endianDecode(T val) const noexcept
 	{
-#if MULTIENDIAN_SUPPORT == 0
-		return val;
-#else
+		if(!Options::MULTIENDIAN_SUPPORT)
+			return val;
 
 		bool be = false;
 
@@ -96,20 +95,14 @@ public:
 			break;
 		}
 
-		return
-#if PLATFORM_LE == 0
-			!
-#endif
-			be ?
+		if (!Options::PLATFORM_LE)
+			be = !be;
 
-			swapEndian<T>(val) : val;
-#endif
+		return be ? swapEndian<T>(val) : val;
 	}
 
 private:
 	bool bigEndian; // to swap
-
-
 };
 
 } // namespace DataBlock
