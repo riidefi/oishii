@@ -66,6 +66,11 @@ public:
 		out = read<T>();
 	}
 
+	template <typename T, EndianSelect E = EndianSelect::Current>
+	T peekAt(int trans);
+	//	template <typename T, EndianSelect E = EndianSelect::Current>
+	//	T readAt();
+
 
 private:
 	template<typename THandler, typename Indirection, typename TContext, bool needsSeekBack = true>
@@ -161,6 +166,43 @@ struct Jump
 	u32 back;
 };
 
+template<Whence W = Whence::Current, typename T = BinaryReader>
+struct JumpOut
+{
+	inline JumpOut(T& stream, u32 offset)
+		: mStream(stream), start(stream.tell()), back(offset)
+	{}
+	inline ~JumpOut()
+	{
+		mStream.seek<Whence::Set>(start);
+		mStream.seek<W>(back);
+	}
+	T& mStream;
+	u32 back;
+	u32 start;
+};
+
+template<typename T = BinaryReader>
+struct DebugExpectSized
+#ifdef RELEASE
+{
+	DebugExpectSized(T& stream, u32 size) {}
+};
+#else
+{
+	inline DebugExpectSized(T& stream, u32 size)
+		: mStream(stream), mStart(stream.tell()), mSize(size)
+	{}
+	inline ~DebugExpectSized()
+	{
+		assert(mStream.tell() - mStart == mSize && "Invalid size for this scope!");
+	}
+
+	T& mStream;
+	u32 mSize;
+	u32 mStart;
+};
+#endif
 template <typename T, EndianSelect E>
 inline T BinaryReader::endianDecode(T val) const noexcept
 {
@@ -216,6 +258,29 @@ T BinaryReader::read()
 	seek<Whence::Current>(sizeof(T));
 	return decoded;
 }
+// TODO: Can rewrite read/peek to use peekAt
+template <typename T, EndianSelect E>
+T BinaryReader::peekAt(int trans)
+{
+#if DO_BOUNDS_CHECK == 1
+	if (tell() + sizeof(T) > endpos())
+	{
+		// Fatal invalidity -- out of space
+		//throw "FATAL: TODO";
+
+		return T{};
+	}
+#endif
+	T decoded = endianDecode<T, E>(*reinterpret_cast<T*>(getStreamStart() + tell() + trans));
+
+	return decoded;
+}
+//template <typename T, EndianSelect E>
+//T BinaryReader::readAt(int trans)
+//{
+//	T decoded = peekAt<T, E>(trans);
+//	return decoded;
+//}
 
 template<typename THandler, typename Indirection, typename TContext, bool needsSeekBack>
 inline void BinaryReader::invokeIndirection(TContext& ctx, u32 atPool)
@@ -328,7 +393,7 @@ struct UncommonInvalidity : public Invalidity
 
 #define READER_HANDLER_DECL(hname, desc, ctx_t) \
 	struct hname { static constexpr char name[] = desc; \
-		static void onRead(oishii::BinaryReader& reader, ctx_t ctx); };
+		static inline void onRead(oishii::BinaryReader& reader, ctx_t ctx); };
 #define READER_HANDLER_IMPL(hname, ctx_t) \
 	void hname::onRead(oishii::BinaryReader& reader, ctx_t ctx)
 #define READER_HANDLER(hname, desc, ctx_t) \

@@ -60,7 +60,9 @@ private:
 	typedef std::pair<const Node*, std::string> LayoutElement;
 	std::vector<LayoutElement> mLayout;
 
+public:
 	//! Associates namespaced IDs to writer positions.
+	//!
 	struct MapEntry
 	{
 		std::string symbol = "?";

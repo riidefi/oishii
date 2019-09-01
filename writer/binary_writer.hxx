@@ -37,7 +37,6 @@ public:
 		while (tell() + sz > mBuf->size())
 			mBuf->push_back(0);
 
-		// Unsafe, but we ensure buffer is sized enough above
 		u32 decoded = endianDecode<u32, E>(val);
 
 		for (int i = 0; i < sz; ++i)
@@ -70,7 +69,7 @@ public:
 		write<T>(static_cast<T>(0xcccccccc)); // TODO: We don't want to cast for floats
     }
 
-	void switchEndian() noexcept { bigEndian = !bigEndian; }
+	void switchEndian() noexcept		 { bigEndian = !bigEndian; }
 	void setEndian(bool big)	noexcept { bigEndian = big; }
 	bool getIsBigEndian() const noexcept { return bigEndian; }
 
