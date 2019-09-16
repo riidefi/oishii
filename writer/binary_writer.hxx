@@ -13,6 +13,13 @@ class Writer : public VectorWriter
 {
 public:
 
+	Writer(u32 sz)
+		: VectorWriter(sz)
+	{}
+	Writer(std::unique_ptr<std::vector<u8>> buf, u32 sz)
+		: VectorWriter(std::move(buf), sz)
+	{}
+
 	template <typename T, EndianSelect E = EndianSelect::Current>
 	void transfer(T& out)
 	{

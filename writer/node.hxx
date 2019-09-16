@@ -10,6 +10,7 @@
 #include "../types.hxx"
 #include <vector>
 #include <memory>
+#include <string>
 
 namespace oishii {
 

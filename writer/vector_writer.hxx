@@ -67,6 +67,21 @@ public:
 protected:
 	u32 mPos;
 	std::unique_ptr<std::vector<u8>> mBuf;
+
+public:
+	void resize(u32 sz)
+	{
+		if (mBuf.get())
+			mBuf->resize(sz);
+	}
+	u8* getDataBlockStart()
+	{
+		return mBuf.get() ? mBuf.get()->data() : nullptr;
+	}
+	u32 getBufSize()
+	{
+		return mBuf.get() ? mBuf->size() : 0;
+	}
 };
 
 } // namespace oishii

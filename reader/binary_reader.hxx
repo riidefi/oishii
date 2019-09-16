@@ -5,6 +5,7 @@
 #include "../util/util.hxx"
 
 #include <array>
+#include <string>
 
 namespace oishii {
 
@@ -102,7 +103,7 @@ void dispatch(TContext& ctx, u32 atPool=0);
 	void signalInvalidityLast(const char* userData);
 
 	// Magics are assumed to be 32 bit
-	template<u32 magic>
+	template<u32 magic, bool critical=true>
 	inline void expectMagic();
 
 
@@ -234,7 +235,7 @@ inline T BinaryReader::endianDecode(T val) const noexcept
 template <typename T, EndianSelect E>
 T BinaryReader::peek()
 {
-	if (Options::DO_BOUNDS_CHECK && tell() + sizeof(T) > endpos())
+	if (Options::BOUNDS_CHECK && tell() + sizeof(T) > endpos())
 	{
 		// Fatal invalidity -- out of space
 		//throw "FATAL: TODO";
@@ -346,11 +347,16 @@ void BinaryReader::signalInvalidityLast(const char* msg)
 	TInval::warn(*this, sizeof(lastReadType), msg);
 }
 
-template<u32 magic>
+template<u32 magic, bool critical>
 inline void BinaryReader::expectMagic()
 {
-if (read<u32, EndianSelect::Big>() != magic)
-	signalInvalidityLast<u32, MagicInvalidity<magic>>();
+	if (read<u32, EndianSelect::Big>() != magic)
+	{
+		signalInvalidityLast<u32, MagicInvalidity<magic>>();
+
+		if (critical)
+			exit(1);
+	}
 }
 template<u32 m>
 struct MagicInvalidity : public Invalidity
