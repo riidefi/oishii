@@ -1,7 +1,9 @@
 #pragma once
 
 #include "../interfaces.hxx"
+
 #include <memory>
+#include <array> // Why?
 
 namespace oishii {
 class MemoryBlockReader : public IReader
