@@ -4,15 +4,16 @@
 
 #include <memory>
 #include <array> // Why?
+#include <vector>
 
 namespace oishii {
 class MemoryBlockReader : public IReader
 {
 public:
 	MemoryBlockReader(u32 sz)
-		: mPos(0), mBufSize(sz), mBuf(std::unique_ptr<char>(new char[sz]))
+		: mPos(0), mBufSize(sz), mBuf(std::vector<u8>(sz))
 	{}
-	MemoryBlockReader(std::unique_ptr<char> buf, u32 sz)
+	MemoryBlockReader(std::vector<u8> buf, u32 sz)
 		: mPos(0), mBufSize(sz), mBuf(std::move(buf))
 	{}
 	virtual ~MemoryBlockReader() {}
@@ -59,9 +60,9 @@ public:
 	{
 		return mBufSize;
 	}
-	char* getStreamStart() final override
+	u8* getStreamStart() final override
 	{
-		return mBuf.get();
+		return mBuf.data();
 	}
 
 	// Faster bound check
@@ -74,7 +75,7 @@ public:
 private:
 	u32 mPos;
 	u32 mBufSize;
-	std::unique_ptr<char> mBuf;
+	std::vector<u8> mBuf;
 };
 
 } // namespace oishii

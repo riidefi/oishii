@@ -28,7 +28,7 @@ class IReader : public AbstractStream
 {
 public:
 
-	virtual char* getStreamStart() = 0;
+	virtual unsigned char* getStreamStart() = 0;
 };
 
 class IWriter : public AbstractStream

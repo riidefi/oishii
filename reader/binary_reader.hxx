@@ -38,7 +38,7 @@ public:
 	//! @param[in] sz  Size of the buffer.
 	//! @param[in] f   Filename
 	//!
-	BinaryReader(std::unique_ptr<char> buf, u32 sz, const char* f = "")
+	BinaryReader(std::vector<u8> buf, u32 sz, const char* f = "")
 		: MemoryBlockReader(std::move(buf), sz), file(f)
 	{}
 
