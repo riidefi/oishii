@@ -165,7 +165,7 @@ inline T swapEndian(T v)
 	}
 
 	// Never reached
-	return 0;
+	return T{};
 }
 
 enum class EndianSelect
