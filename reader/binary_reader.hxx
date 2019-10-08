@@ -61,6 +61,9 @@ public:
 	template <typename T, EndianSelect E = EndianSelect::Current>
 	T read();
 
+	template <typename T, int num = 1, EndianSelect E = EndianSelect::Current>
+	std::array<T, num> readX();
+
 	template <typename T, EndianSelect E = EndianSelect::Current>
 	void transfer(T& out)
 	{
@@ -260,6 +263,18 @@ T BinaryReader::read()
 	seek<Whence::Current>(sizeof(T));
 	return decoded;
 }
+
+template <typename T, int num, EndianSelect E>
+std::array<T, num> BinaryReader::readX()
+{
+	std::array<T, num> result;
+
+	for (auto& e : result)
+		e = read<T>();
+
+	return result;
+}
+
 // TODO: Can rewrite read/peek to use peekAt
 template <typename T, EndianSelect E>
 T BinaryReader::peekAt(int trans)
