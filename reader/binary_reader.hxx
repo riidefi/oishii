@@ -79,16 +79,17 @@ public:
 private:
 	template<typename THandler, typename Indirection, typename TContext, bool needsSeekBack = true>
 	inline void invokeIndirection(TContext& ctx, u32 atPool=0);
+
 public:
-//! @brief Dispatch an indirect data read to a handler.
-//!
-//! @tparam THandler		The handler.
-//! @tparam TIndirection	The sequence necessary to derive the value.
-//! @tparam seekback		Whether or not the reader should be restored to the end of the first indirection jump.
-//! @tparam TContext		Type of value to pass to handler.
-//!
-template <typename THandler, typename TIndirection = Direct, bool seekBack = true, typename TContext>
-void dispatch(TContext& ctx, u32 atPool=0);
+	//! @brief Dispatch an indirect data read to a handler.
+	//!
+	//! @tparam THandler		The handler.
+	//! @tparam TIndirection	The sequence necessary to derive the value.
+	//! @tparam seekback		Whether or not the reader should be restored to the end of the first indirection jump.
+	//! @tparam TContext		Type of value to pass to handler.
+	//!
+	template <typename THandler, typename TIndirection = Direct, bool seekBack = true, typename TContext>
+	void dispatch(TContext& ctx, u32 atPool=0);
 
 	//! @brief Warn that there is an issue in a certain range. Stack trace is read and reported.
 	//!
@@ -152,6 +153,32 @@ private:
 
 	DispatchStack mStack;
 	u32 cblockstart = 0; // Start of current block, necessary for dispatch
+
+	
+	void boundsCheck(u32 size, u32 at) noexcept
+	{
+		// TODO: Implement
+		if (Options::BOUNDS_CHECK && at + size > endpos())
+		{
+			// Fatal invalidity -- out of space
+		}
+	}
+	void boundsCheck(u32 size) noexcept
+	{
+		boundsCheck(tell());
+	}
+	void alignmentCheck(u32 size, u32 at)
+	{
+		if (Options::ALIGNMENT_CHECK && at % size)
+		{
+			// TODO: Filter warnings in same scope, only print stack once.
+			warnAt((std::string("Alignment error: ") + std::to_string(tell()) + " is not " + std::to_string(size) + " byte aligned.").c_str(), at, at + size, true);
+		}
+	}
+	void alignmentCheck(u32 size)
+	{
+		alignmentCheck(size, tell());
+	}
 };
 
 template <typename T, EndianSelect E>
@@ -185,19 +212,8 @@ inline T BinaryReader::endianDecode(T val) const noexcept
 template <typename T, EndianSelect E>
 T BinaryReader::peek()
 {
-	if (Options::BOUNDS_CHECK && tell() + sizeof(T) > endpos())
-	{
-		// Fatal invalidity -- out of space
-		//throw "FATAL: TODO";
-
-		return T{};
-	}
-
-	if (Options::ALIGNMENT_CHECK && tell() % sizeof(T))
-	{
-		// TODO: Filter warnings in same scope, only print stack once.
-		warnAt((std::string("Alignment error: ") + std::to_string(tell()) + " is not " + std::to_string(sizeof(T)) + " byte aligned.").c_str(), tell(), tell() + sizeof(T), true);
-	}
+	boundsCheck(sizeof(T));
+	alignmentCheck(sizeof(T));
 
 	T decoded = endianDecode<T, E>(*reinterpret_cast<T*>(getStreamStart() + tell()));
 	
@@ -226,13 +242,7 @@ std::array<T, num> BinaryReader::readX()
 template <typename T, EndianSelect E>
 T BinaryReader::peekAt(int trans)
 {
-	if (Options::DO_BOUNDS_CHECK && tell() + sizeof(T) > endpos())
-	{
-		// Fatal invalidity -- out of space
-		//throw "FATAL: TODO";
-
-		return T{};
-	}
+	boundsCheck(sizeof(T));
 
 	T decoded = endianDecode<T, E>(*reinterpret_cast<T*>(getStreamStart() + tell() + trans));
 
