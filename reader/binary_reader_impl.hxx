@@ -95,30 +95,15 @@ inline void BinaryReader::invokeIndirection(TContext& ctx, u32 atPool)
 	}
 	else
 	{
-		//_ASSERT(mStack.mSize < 16);
-		mStack.push_entry(tell(), THandler::name, tell());
-
-
+		// FIXME: Update ScopedRegion to be usable here.
 		u32 jump_save = 0;
 		u32 jump_size_save = 0;
-		// Jump is owned by past block
-		if (mStack.mSize > 1)
-		{
-			jump_save = mStack.mStack[mStack.mSize - 2].jump;
-			jump_size_save = mStack.mStack[mStack.mSize - 2].jump_sz;
-			mStack.mStack[mStack.mSize - 2].jump = start;
-			mStack.mStack[mStack.mSize - 2].jump_sz = sizeof(typename Indirection::offset_t); // TODO: For direct, is it really showing 0?
-		}
-		cblockstart = tell();
+
+		enterRegion(THandler::name, jump_save, jump_size_save, start, sizeof(typename Indirection::offset_t)); // TODO -- ensure 0 for direct
+
 		THandler::onRead(*this, ctx);
 
-		if (mStack.mSize > 1)
-		{
-			mStack.mStack[mStack.mSize - 2].jump = jump_save;
-			mStack.mStack[mStack.mSize - 2].jump_sz = jump_size_save;
-		}
-
-		--mStack.mSize;
+		exitRegion(jump_save, jump_size_save);
 	}
 	// With multiple levels of indirection, we only need to seek back on the outermost layer
 	if (needsSeekBack)

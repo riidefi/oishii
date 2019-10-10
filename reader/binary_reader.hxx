@@ -87,6 +87,24 @@ public:
 	template <typename THandler, typename TIndirection = Direct, bool seekBack = true, typename TContext>
 	void dispatch(TContext& ctx, u32 atPool=0);
 
+	struct ScopedRegion
+	{
+		ScopedRegion(BinaryReader& reader, const char* name)
+			: mReader(reader)
+		{
+			mReader.enterRegion(name, jump_save, jump_size_save, reader.tell(), 0);
+		}
+		~ScopedRegion()
+		{
+			mReader.exitRegion(jump_save, jump_size_save);
+		}
+
+	private:
+		u32 jump_save;
+		u32 jump_size_save;
+		BinaryReader& mReader;
+	};
+
 	//! @brief Warn that there is an issue in a certain range. Stack trace is read and reported.
 	//!
 	//! @param[in] msg			Message to print
@@ -174,6 +192,30 @@ private:
 	void alignmentCheck(u32 size)
 	{
 		alignmentCheck(size, tell());
+	}
+	void enterRegion(const char* name, u32& jump_save, u32& jump_size_save, u32 start, u32 size)
+	{
+		//_ASSERT(mStack.mSize < 16);
+		mStack.push_entry(start, name, start);
+
+		// Jump is owned by past block
+		if (mStack.mSize > 1)
+		{
+			jump_save = mStack.mStack[mStack.mSize - 2].jump;
+			jump_size_save = mStack.mStack[mStack.mSize - 2].jump_sz;
+			mStack.mStack[mStack.mSize - 2].jump = start;
+			mStack.mStack[mStack.mSize - 2].jump_sz = size;
+		}
+	}
+	void exitRegion(u32 jump_save, u32 jump_size_save)
+	{
+		if (mStack.mSize > 1)
+		{
+			mStack.mStack[mStack.mSize - 2].jump = jump_save;
+			mStack.mStack[mStack.mSize - 2].jump_sz = jump_size_save;
+		}
+
+		--mStack.mSize;
 	}
 };
 
