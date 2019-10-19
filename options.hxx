@@ -6,13 +6,17 @@ namespace oishii {
 	// TODO: Use OISHII_DEBUG and OISHII_RELEASE not poular DEBUG/RELEASE
 	// TODO: Implement bounds checking and enable by default on debug builds
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && !defined(DEBUG)
 #define DEBUG
 #endif
 
 #ifdef _NDEBUG
+#ifndef RELEASE
 #define RELEASE
+#endif
+#ifdef DEBUG
 #undef DEBUG
+#endif
 #endif
 
 #if defined(DEBUG) && defined(RELEASE)

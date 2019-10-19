@@ -70,6 +70,11 @@ public:
 	T peekAt(int trans);
 	//	template <typename T, EndianSelect E = EndianSelect::Current>
 	//	T readAt();
+	template <typename T, EndianSelect E = EndianSelect::Current>
+	T getAt(int trans)
+	{
+		return peekAt<T, E>(trans - tell());
+	}
 
 
 private:
@@ -92,6 +97,7 @@ public:
 		ScopedRegion(BinaryReader& reader, const char* name)
 			: mReader(reader)
 		{
+			start = reader.tell();
 			mReader.enterRegion(name, jump_save, jump_size_save, reader.tell(), 0);
 		}
 		~ScopedRegion()
@@ -102,6 +108,8 @@ public:
 	private:
 		u32 jump_save;
 		u32 jump_size_save;
+	public:
+		u32 start;
 		BinaryReader& mReader;
 	};
 

@@ -68,7 +68,7 @@ std::array<T, num> BinaryReader::readX()
 template <typename T, EndianSelect E>
 T BinaryReader::peekAt(int trans)
 {
-	boundsCheck(sizeof(T));
+	boundsCheck(sizeof(T), tell() + trans);
 
 	T decoded = endianDecode<T, E>(*reinterpret_cast<T*>(getStreamStart() + tell() + trans));
 

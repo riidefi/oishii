@@ -41,6 +41,7 @@ struct DebugExpectSized
 #ifdef RELEASE
 {
 	DebugExpectSized(T& stream, u32 size) {}
+	bool assertSince(u32) { return true; }
 };
 #else
 {
@@ -49,7 +50,21 @@ struct DebugExpectSized
 	{}
 	inline ~DebugExpectSized()
 	{
+		if (mStream.tell() - mStart != mSize)
+			printf("Expected to read %u bytes -- instead read %u\n", mSize, mStream.tell() - mStart);
 		assert(mStream.tell() - mStart == mSize && "Invalid size for this scope!");
+	}
+
+	bool assertSince(u32 dif)
+	{
+		const auto real_dif = mStream.tell() - mStart;
+
+		if (real_dif != dif)
+		{
+			printf("Needed to read %u (%x) bytes; instead read %u (%x)\n", dif, dif, real_dif, real_dif);
+			return false;
+		}
+		return true;
 	}
 
 	T& mStream;
