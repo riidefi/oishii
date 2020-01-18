@@ -52,28 +52,33 @@ public:
 	template <typename T, EndianSelect E = EndianSelect::Current>
 	inline T endianDecode(T val) const noexcept;
 
-	template <typename T, EndianSelect E = EndianSelect::Current>
+	template <typename T, EndianSelect E = EndianSelect::Current, bool unaligned = false>
 	T peek();
-	template <typename T, EndianSelect E = EndianSelect::Current>
+	template <typename T, EndianSelect E = EndianSelect::Current, bool unaligned = false>
 	T read();
-
-	template <typename T, int num = 1, EndianSelect E = EndianSelect::Current>
-	std::array<T, num> readX();
-
-	template <typename T, EndianSelect E = EndianSelect::Current>
-	void transfer(T& out)
+	template<typename T, EndianSelect E = EndianSelect::Current>
+	inline T readUnaligned()
 	{
-		out = read<T>();
+		return read<T, E, true>();
 	}
 
-	template <typename T, EndianSelect E = EndianSelect::Current>
+	template <typename T, int num = 1, EndianSelect E = EndianSelect::Current, bool unaligned = false>
+	std::array<T, num> readX();
+
+	template <typename T, EndianSelect E = EndianSelect::Current, bool unaligned = false>
+	void transfer(T& out)
+	{
+		out = read<T, E, unaligned>();
+	}
+
+	template <typename T, EndianSelect E = EndianSelect::Current, bool unaligned = false>
 	T peekAt(int trans);
 	//	template <typename T, EndianSelect E = EndianSelect::Current>
 	//	T readAt();
-	template <typename T, EndianSelect E = EndianSelect::Current>
+	template <typename T, EndianSelect E = EndianSelect::Current, bool unaligned = false>
 	T getAt(int trans)
 	{
-		return peekAt<T, E>(trans - tell());
+		return peekAt<T, E, unaligned>(trans - tell());
 	}
 
 

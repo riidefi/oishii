@@ -35,40 +35,43 @@ inline T BinaryReader::endianDecode(T val) const noexcept
 
 }
 
-template <typename T, EndianSelect E>
+template <typename T, EndianSelect E, bool unaligned>
 T BinaryReader::peek()
 {
 	boundsCheck(sizeof(T));
-	alignmentCheck(sizeof(T));
+	if (!unaligned)
+		alignmentCheck(sizeof(T));
 
 	T decoded = endianDecode<T, E>(*reinterpret_cast<T*>(getStreamStart() + tell()));
 
 	return decoded;
 }
-template <typename T, EndianSelect E>
+template <typename T, EndianSelect E, bool unaligned>
 T BinaryReader::read()
 {
-	T decoded = peek<T, E>();
+	T decoded = peek<T, E, unaligned>();
 	seek<Whence::Current>(sizeof(T));
 	return decoded;
 }
 
-template <typename T, int num, EndianSelect E>
+
+template <typename T, int num, EndianSelect E, bool unaligned>
 std::array<T, num> BinaryReader::readX()
 {
 	std::array<T, num> result;
 
 	for (auto& e : result)
-		e = read<T>();
+		e = read<T, E, unaligned>();
 
 	return result;
 }
 
 // TODO: Can rewrite read/peek to use peekAt
-template <typename T, EndianSelect E>
+template <typename T, EndianSelect E, bool unaligned>
 T BinaryReader::peekAt(int trans)
 {
-	boundsCheck(sizeof(T), tell() + trans);
+	if (!unaligned)
+		boundsCheck(sizeof(T), tell() + trans);
 
 	T decoded = endianDecode<T, E>(*reinterpret_cast<T*>(getStreamStart() + tell() + trans));
 
