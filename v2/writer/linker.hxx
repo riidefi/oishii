@@ -9,7 +9,7 @@
 #include <string>
 #include <memory>
 
-#include "../types.hxx"
+#include "../../types.hxx"
 
 #include "hook.hxx"
 #include "node.hxx"
@@ -30,8 +30,8 @@ class Linker
 	friend class LinkerHelper;
 public:
 
-	Linker();
-	~Linker();
+	Linker() = default;
+	~Linker() = default;
 
 	//! @brief Gathers nodes recursively from the root into the layout.
 	//!

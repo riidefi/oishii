@@ -7,7 +7,7 @@
 #pragma once
 
 
-#include "../types.hxx"
+#include "../../types.hxx"
 #include <vector>
 #include <memory>
 #include <string>
@@ -46,14 +46,18 @@ struct LinkingRestriction
     //!
     u32 alignment = 0;
 
-    bool isFlag(Options o)
+    bool isFlag(Options o) const noexcept
     {
         return static_cast<u32>(options) & static_cast<u32>(o);
     }
-    void setFlag(Options o)
+    void setFlag(Options o) noexcept
     {
         options = static_cast<Options>(static_cast<u32>(options) | static_cast<u32>(o));
     }
+	void setLeaf()
+	{
+		setFlag(Leaf);
+	}
 };
 
 //! @brief An abstract block (node) in the new serialization model.
@@ -128,9 +132,9 @@ public:
     //!
     //! @return The result of the operation. Returning fatal will not stop other blocks from writing.
     //!
-    virtual Result write(Writer& writer) const noexcept = 0;
+	virtual Result write(Writer& writer) const noexcept { return {}; }
 
-protected:
+public:
     struct NodeDelegate
     {
         void addNode(std::unique_ptr<Node> node)
@@ -145,7 +149,7 @@ protected:
     private:
         std::vector<std::unique_ptr<Node>>& mVec;
     };
-
+protected:
     //! @brief Gathers children for the block. This will only be called through getChildren foreignly.
     //!
     //! @details Default behavior will do absolutely nothing.

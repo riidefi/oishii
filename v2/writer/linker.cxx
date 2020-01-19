@@ -103,11 +103,6 @@ struct EndOfChildrenMarker : public Node
 	const Node& mParent;
 };
 
-Linker::Linker()
-{}
-Linker::~Linker()
-{
-}
 
 // We call this recursively	
 void Linker::gather(std::unique_ptr<Node> pRoot, const std::string& nameSpace) noexcept

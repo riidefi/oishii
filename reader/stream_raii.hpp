@@ -10,11 +10,11 @@ struct Jump
 	inline Jump(T& stream, u32 offset)
 		: mStream(stream), back(stream.tell())
 	{
-		mStream.seek<W>(offset);
+		mStream.template seek<W>(offset);
 	}
 	inline ~Jump()
 	{
-		mStream.seek<Whence::Set>(back);
+		mStream.template seek<Whence::Set>(back);
 	}
 	T& mStream;
 	u32 back;
@@ -28,8 +28,8 @@ struct JumpOut
 	{}
 	inline ~JumpOut()
 	{
-		mStream.seek<Whence::Set>(start);
-		mStream.seek<W>(back);
+		mStream.template seek<Whence::Set>(start);
+		mStream.template seek<W>(back);
 	}
 	T& mStream;
 	u32 back;

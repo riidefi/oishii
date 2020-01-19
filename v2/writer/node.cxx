@@ -16,7 +16,7 @@ Node::Result Node::gatherChildren(NodeDelegate& mOut) const
 Node::Result Node::getChildren(std::vector<std::unique_ptr<Node>>& mOut) const
 {
     mOut.clear();
-    auto result = gatherChildren({mOut});
+    auto result = gatherChildren(NodeDelegate{mOut});
 
     if (!mOut.empty() && mLinkingRestriction.options & LinkingRestriction::Leaf)
     {
