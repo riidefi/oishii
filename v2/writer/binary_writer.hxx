@@ -74,6 +74,12 @@ public:
 		write<T>(static_cast<T>(0xcccccccc)); // TODO: We don't want to cast for floats
 	}
 
+	template<typename T>
+	void writeLink(const Hook& from, const Hook& to)
+	{
+		writeLink<T>(Link{ from, to });
+	}
+
 	void switchEndian() noexcept { bigEndian = !bigEndian; }
 	void setEndian(bool big)	noexcept { bigEndian = big; }
 	bool getIsBigEndian() const noexcept { return bigEndian; }

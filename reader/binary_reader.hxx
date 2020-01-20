@@ -188,6 +188,7 @@ private:
 		if (Options::BOUNDS_CHECK && at + size > endpos())
 		{
 			// Fatal invalidity -- out of space
+			throw "Out of bounds read.";
 		}
 	}
 	void boundsCheck(u32 size) noexcept
@@ -230,6 +231,31 @@ private:
 
 		--mStack.mSize;
 	}
+
+#ifndef NDEBUG
+public:
+	struct BP
+	{
+		u32 offset, size;
+		BP(u32 o, u32 s)
+			: offset(o), size(s)
+		{}
+	};
+	void add_bp(u32 offset, u32 size)
+	{
+		mBreakPoints.emplace_back(offset, size);
+	}
+	template<typename T>
+	void add_bp(u32 offset)
+	{
+		add_bp(offset, sizeof(T));
+	}
+	std::vector<BP> mBreakPoints;
+#else
+	void add_bp(u32, u32) {}
+	template<typename T>
+	void add_bp(u32) {}
+#endif
 };
 
 

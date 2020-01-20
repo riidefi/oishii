@@ -53,6 +53,8 @@ public:
 	//!
 	void write(Writer& writer, bool shuffle = false);
 
+	using PadFunction = void(*)(char* dst, u32 size);
+	PadFunction mUserPad = nullptr;
 	
 private:
 	struct LayoutElement

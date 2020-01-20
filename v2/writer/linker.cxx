@@ -149,9 +149,13 @@ void Linker::write(Writer& writer, bool doShuffle)
 		// align
 		u32 alignment = entry.mNode->getLinkingRestriction().alignment;
 		if (alignment)
+		{
+			auto pad_begin = writer.tell();
 			while (writer.tell() % alignment)
-				writer.seek<Whence::Current>(1);
-
+				writer.write('F');
+			if (pad_begin != writer.tell() && mUserPad)
+				mUserPad((char*)writer.getDataBlockStart() + pad_begin, writer.tell() - pad_begin);
+		}
 		// Fill map: symbol and begin position
 		mMap.push_back({ (entry.mNamespace.empty() ? "" : entry.mNamespace + "::") + entry.mNode->getId(), writer.tell(), 0, entry.mNode->getLinkingRestriction() });
 		// Write

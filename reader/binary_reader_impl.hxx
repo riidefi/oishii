@@ -39,9 +39,22 @@ template <typename T, EndianSelect E, bool unaligned>
 T BinaryReader::peek()
 {
 	boundsCheck(sizeof(T));
+
+
+#ifndef NDEBUG
+	for (const auto& bp : mBreakPoints)
+	{
+		if (tell() >= bp.offset && tell() + sizeof(T) <= bp.offset + bp.size)
+		{
+			printf("Reading from %04u (0x%04x) sized %u\n", tell(), tell(), sizeof(T));
+			warnAt("Breakpoint hit", tell(), tell() + sizeof(T));
+			__debugbreak();
+		}
+	}
+#endif
+
 	if (!unaligned)
 		alignmentCheck(sizeof(T));
-
 	T decoded = endianDecode<T, E>(*reinterpret_cast<T*>(getStreamStart() + tell()));
 
 	return decoded;
@@ -73,6 +86,17 @@ T BinaryReader::peekAt(int trans)
 	if (!unaligned)
 		boundsCheck(sizeof(T), tell() + trans);
 
+#ifndef NDEBUG
+	for (const auto& bp : mBreakPoints)
+	{
+		if (tell() + trans >= bp.offset && tell() + trans + sizeof(T) <= bp.offset + bp.size)
+		{
+			printf("Reading from %04u (0x%04x) sized %u\n", tell() + trans, tell() + trans, sizeof(T));
+			warnAt("Breakpoint hit", tell() + trans, tell() + trans + sizeof(T));
+			__debugbreak();
+		}
+	}
+#endif
 	T decoded = endianDecode<T, E>(*reinterpret_cast<T*>(getStreamStart() + tell() + trans));
 
 	return decoded;
