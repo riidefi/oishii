@@ -14,6 +14,7 @@ namespace oishii::v2 {
 struct Link
 {
 	Hook from, to;
+	int mStride = 1;
 };
 
 

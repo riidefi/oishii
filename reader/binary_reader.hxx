@@ -201,6 +201,7 @@ private:
 		{
 			// TODO: Filter warnings in same scope, only print stack once.
 			warnAt((std::string("Alignment error: ") + std::to_string(tell()) + " is not " + std::to_string(size) + " byte aligned.").c_str(), at, at + size, true);
+			__debugbreak();
 		}
 	}
 	void alignmentCheck(u32 size)

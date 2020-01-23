@@ -17,6 +17,7 @@
 
 namespace oishii::v2 {
 
+
 // Helpers
 class LinkerHelper
 {
@@ -38,8 +39,9 @@ public:
 			}
 		// Children
 		{
-			// TODO: NAME AND ID MUST MATCH. NOT INTENDEDs
-			const std::string nameSpacePrefix = nameSpace.empty() ? "" : nameSpace + "::";
+			std::string nameSpacePrefix = nameSpace.empty() ? "" : nameSpace + "::";
+			//	if (hasEnding(nameSpacePrefix, "::::"))
+			//		nameSpacePrefix = nameSpacePrefix.substr(0, nameSpacePrefix.size() - 2);
 			const std::string nameSpacedSymbol = nameSpacePrefix + (blockName.empty() ? "" : blockName + "::") + symbol;
 			for (const auto& entry : linker.mLayout)
 				if ((entry.mNamespace.empty() ? entry.mNode->getId() : entry.mNamespace + "::" + entry.mNode->getId()) == nameSpacedSymbol)
@@ -52,13 +54,14 @@ public:
 		// Global
 		{
 			for (const auto& entry : linker.mLayout)
-				if (entry.mNamespace == symbol)
+				if ((entry.mNamespace.empty() ? entry.mNode->getId() : entry.mNamespace + "::" + entry.mNode->getId()) == symbol)
 				{
 					//if (resultName)
 						resultName = symbol;
 					return *entry.mNode;
 				}
 		}
+		printf("Search for %s failed!\n", symbol.c_str());
 		assert(!"Failed critical namespaced symbol lookup in layout");
 	}
 	// TODO: Offset might be better removed
@@ -78,14 +81,26 @@ public:
 			{
 				switch (pos)
 				{
-					// todo: EndOfChildren
 				case Hook::RelativePosition::Begin:
 				case Hook::RelativePosition::EndOfChildren: // begin of marker node
-					return entry.begin + offset;
+				{
+					auto roundDown = [](u32 in, u32 align) -> u32{
+						return align ? in & ~(align - 1) : in;
+					};
+					auto roundUp = [roundDown](u32 in, u32 align) -> u32 {
+						return align ? roundDown(in + (align - 1), align) : in;
+					};
+					u32 x = entry.begin + offset;
+					// TODO: We don't need to make another pass from the start
+					u32 align = pos == Hook::RelativePosition::Begin ? entry.restrict.alignment :
+						std::find_if(linker.mMap.begin(), linker.mMap.end(), [symbol](auto& e) { return e.symbol == symbol; })->restrict.alignment;
+					u32 rounded = roundUp(x, align);
+					return rounded;
+				}
 				case Hook::RelativePosition::End:
 					return entry.end + offset;
 				default:
-					printf("Linker Error: Unknown hook type %u -- assuming Begin\n", pos);
+					printf("Linker Error: Unknown hook type %u -- assuming Begin (no align)\n", pos);
 					return entry.begin + offset;
 				}
 			}
@@ -236,7 +251,7 @@ void Linker::write(Writer& writer, bool doShuffle)
 
 		writer.seek<Whence::Set>(addr);
 
-		writer.writeN(reserve.TSize, toAddr - fromAddr);
+		writer.writeN(reserve.TSize, (toAddr - fromAddr) / reserve.mLink.mStride);
 
 	}
 }
