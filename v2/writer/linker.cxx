@@ -167,7 +167,7 @@ void Linker::write(Writer& writer, bool doShuffle)
 		{
 			auto pad_begin = writer.tell();
 			while (writer.tell() % alignment)
-				writer.write('F');
+				writer.write('F', false);
 			if (pad_begin != writer.tell() && mUserPad)
 				mUserPad((char*)writer.getDataBlockStart() + pad_begin, writer.tell() - pad_begin);
 		}
@@ -179,6 +179,15 @@ void Linker::write(Writer& writer, bool doShuffle)
 		entry.mNode->write(writer);
 		// Set ending position
 		mMap[mMap.size() - 1].end = writer.tell();
+
+		if (entry.mNode->getLinkingRestriction().isFlag(LinkingRestriction::PadEnd) && alignment)
+		{
+			auto pad_begin = writer.tell();
+			while (writer.tell() % alignment)
+				writer.write('F', false);
+			if (pad_begin != writer.tell() && mUserPad)
+				mUserPad((char*)writer.getDataBlockStart() + pad_begin, writer.tell() - pad_begin);
+		}
 	}
 
 	{
@@ -251,8 +260,26 @@ void Linker::write(Writer& writer, bool doShuffle)
 
 		writer.seek<Whence::Set>(addr);
 
-		writer.writeN(reserve.TSize, (toAddr - fromAddr) / reserve.mLink.mStride);
-
+		u32 dif = (toAddr - fromAddr) / reserve.mLink.mStride;
+		//writer.writeN(reserve.TSize, dif);
+		switch (reserve.TSize)
+		{
+		case 1:
+			assert(dif < (u8)-1 && "Overflow error.");
+			writer.write<u8>(dif);
+			break;
+		case 2:
+			assert(dif < (u16)-1 && "Overflow error.");
+			writer.write<u16>(dif);
+			break;
+		case 4:
+			assert(dif < (u64)-1 && "Overflow error.");
+			writer.write<u32>(dif);
+			break;
+		default:
+			assert(!"Invalid write size.");
+			break;
+		}
 	}
 }
 

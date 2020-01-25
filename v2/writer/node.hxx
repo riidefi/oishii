@@ -37,7 +37,11 @@ struct LinkingRestriction
 
         //! Signifies that this datablock cannot have children.
         //!
-        Leaf = (1 << 2)
+        Leaf = (1 << 2),
+
+		//! Pad the end of the block as well as the start.
+		//!
+		PadEnd = (1 << 3)
     };
 
     Options options = None;

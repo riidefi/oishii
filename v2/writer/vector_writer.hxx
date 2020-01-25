@@ -63,10 +63,20 @@ public:
 		return pos < mBuf.size();
 	}
 
+	void attachDataForMatchingOutput(const std::vector<u8>& data)
+	{
+#ifndef NDEBUG
+		mDebugMatch = data;
+#endif
+	}
+
+
 protected:
 	u32 mPos;
 	std::vector<u8> mBuf;
-
+#ifndef NDEBUG
+	std::vector<u8> mDebugMatch;
+#endif
 public:
 	void resize(u32 sz)
 	{

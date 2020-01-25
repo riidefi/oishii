@@ -26,12 +26,28 @@ public:
 	}
 
 	template <typename T, EndianSelect E = EndianSelect::Current>
-	void write(T val)
+	void write(T val, bool checkmatch=true)
 	{
 		while (tell() + sizeof(T) > mBuf.size())
 			mBuf.push_back(0);
 
-		*reinterpret_cast<T*>(&mBuf[tell()]) = endianDecode<T, E>(val);
+		breakPointProcess(sizeof(T));
+
+		const auto decoded = endianDecode<T, E>(val);
+
+#ifndef NDEBUG
+		if (checkmatch && mDebugMatch.size() > tell() && !std::is_floating_point_v<T>)
+		{
+			const auto before = *reinterpret_cast<T*>(&mDebugMatch[tell()]);
+			if (before != decoded && decoded != (T)0xcccccccc)
+			{
+				printf("Matching violation at %x: writing %x where should be %x\n", tell(), decoded, before);
+				__debugbreak();
+			}
+		}
+#endif
+
+		*reinterpret_cast<T*>(&mBuf[tell()]) = decoded;
 
 		seek<Whence::Current>(sizeof(T));
 	}
@@ -44,6 +60,22 @@ public:
 
 		u32 decoded = endianDecode<u32, E>(val);
 
+#if 0
+#ifndef NDEBUG1
+		if (/*checkmatch && */mDebugMatch.size() > tell() + sz)
+		{
+			for (int i = 0; i < sz; ++i)
+			{
+				const auto before = mDebugMatch[tell() + i];
+				if (before != decoded >> (8 * i))
+				{
+					printf("Matching violation at %x: writing %x where should be %x\n", tell(), decoded, before);
+					__debugbreak();
+				}
+			}
+		}
+#endif
+#endif
 		for (int i = 0; i < sz; ++i)
 			mBuf[tell() + i] = static_cast<u8>(decoded >> (8 * i));
 
