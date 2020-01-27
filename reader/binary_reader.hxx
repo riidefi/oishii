@@ -111,10 +111,10 @@ public:
 		}
 
 	private:
-		u32 jump_save;
-		u32 jump_size_save;
+		u32 jump_save = 0;
+		u32 jump_size_save = 0;
 	public:
-		u32 start;
+		u32 start = 0;
 		BinaryReader& mReader;
 	};
 
@@ -146,7 +146,7 @@ public:
 	void setFile(const char* f) noexcept { file = f; }
 
 private:
-	bool bigEndian; // to swap
+	bool bigEndian = true; // to swap
 	const char* file = "?";
 
 	struct DispatchStack
@@ -175,18 +175,19 @@ private:
 			cur.jump_sz = 1;
 		}
 
-
+		DispatchStack() = default;
 	};
 
 	DispatchStack mStack;
 	u32 cblockstart = 0; // Start of current block, necessary for dispatch
 
 	
-	void boundsCheck(u32 size, u32 at) noexcept
+	void boundsCheck(u32 size, u32 at)
 	{
 		// TODO: Implement
 		if (Options::BOUNDS_CHECK && at + size > endpos())
 		{
+			// warnAt("Out of bounds read...", at, size + at);
 			// Fatal invalidity -- out of space
 			throw "Out of bounds read.";
 		}

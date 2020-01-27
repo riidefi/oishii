@@ -109,7 +109,7 @@ public:
 	}
 
 private:
-	bool bigEndian; // to swap
+	bool bigEndian = true; // to swap
 };
 
 } // namespace DataBlock

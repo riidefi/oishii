@@ -25,29 +25,52 @@ public:
 		write<T>(out);
 	}
 
+	template<u32 size>
+	struct integral_of_equal_size;
+
+	template<>
+	struct integral_of_equal_size<1> { using type = u8; };
+
+	template<>
+	struct integral_of_equal_size<2> { using type = u16; };
+
+	template<>
+	struct integral_of_equal_size<4> { using type = u32; };
+
+	template<typename T>
+	using integral_of_equal_size_t = typename integral_of_equal_size<sizeof(T)>::type;
+
+
 	template <typename T, EndianSelect E = EndianSelect::Current>
 	void write(T val, bool checkmatch=true)
 	{
+		using integral_t = integral_of_equal_size_t<T>;
+
 		while (tell() + sizeof(T) > mBuf.size())
 			mBuf.push_back(0);
 
 		breakPointProcess(sizeof(T));
 
-		const auto decoded = endianDecode<T, E>(val);
+		union {
+			integral_t integral;
+			T current;
+		} raw;
+		raw.current = val;
+		const auto decoded = endianDecode<integral_t, E>(raw.integral);
 
 #ifndef NDEBUG
-		if (checkmatch && mDebugMatch.size() > tell() && !std::is_floating_point_v<T>)
+		if (checkmatch && mDebugMatch.size() > tell() + sizeof(T))
 		{
-			const auto before = *reinterpret_cast<T*>(&mDebugMatch[tell()]);
-			if (before != decoded && decoded != (T)0xcccccccc)
+			const auto before = *reinterpret_cast<integral_t*>(&mDebugMatch[tell()]);
+			if (before != decoded && decoded != 0xcccccccc)
 			{
-				printf("Matching violation at %x: writing %x where should be %x\n", tell(), decoded, before);
+				printf("Matching violation at %x: writing %x where should be %x\n", tell(), (u32)decoded, (u32)before);
 				__debugbreak();
 			}
 		}
 #endif
 
-		*reinterpret_cast<T*>(&mBuf[tell()]) = decoded;
+		*reinterpret_cast<integral_t*>(&mBuf[tell()]) = decoded;
 
 		seek<Whence::Current>(sizeof(T));
 	}
@@ -144,6 +167,16 @@ public:
 		return be ? swapEndian<T>(val) : val;
 	}
 
+	void alignTo(u32 alignment)
+	{
+		auto pad_begin = tell();
+		while (tell() % alignment)
+			write('F', false);
+		if (pad_begin != tell() && mUserPad)
+			mUserPad((char*)getDataBlockStart() + pad_begin, tell() - pad_begin);
+	}
+	using PadFunction = void(*)(char* dst, u32 size);
+	PadFunction mUserPad = nullptr;
 private:
 	bool bigEndian = true; // to swap
 };

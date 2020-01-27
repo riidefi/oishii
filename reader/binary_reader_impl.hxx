@@ -46,7 +46,7 @@ T BinaryReader::peek()
 	{
 		if (tell() >= bp.offset && tell() + sizeof(T) <= bp.offset + bp.size)
 		{
-			printf("Reading from %04u (0x%04x) sized %u\n", tell(), tell(), sizeof(T));
+			printf("Reading from %04u (0x%04x) sized %u\n", tell(), tell(), (u32)sizeof(T));
 			warnAt("Breakpoint hit", tell(), tell() + sizeof(T));
 			__debugbreak();
 		}
@@ -91,7 +91,7 @@ T BinaryReader::peekAt(int trans)
 	{
 		if (tell() + trans >= bp.offset && tell() + trans + sizeof(T) <= bp.offset + bp.size)
 		{
-			printf("Reading from %04u (0x%04x) sized %u\n", tell() + trans, tell() + trans, sizeof(T));
+			printf("Reading from %04u (0x%04x) sized %u\n", (u32)tell() + trans, (u32)tell() + trans, (u32)sizeof(T));
 			warnAt("Breakpoint hit", tell() + trans, tell() + trans + sizeof(T));
 			__debugbreak();
 		}

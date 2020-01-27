@@ -209,7 +209,7 @@ void Linker::write(Writer& writer, bool doShuffle)
 	for (const auto& reserve : writer.mLinkReservations)
 	{
 		// todo: make map
-		const u32 addr = reserve.addr;
+		const u32 addr = static_cast<u32>(reserve.addr);
 		const Link& link = reserve.mLink;
 		const std::string& nameSpace = reserve.nameSpace.empty() ? "" : reserve.nameSpace + "::";
 
@@ -273,7 +273,7 @@ void Linker::write(Writer& writer, bool doShuffle)
 			writer.write<u16>(dif);
 			break;
 		case 4:
-			assert(dif < (u64)-1 && "Overflow error.");
+			assert(dif < (u32)-1 && "Overflow error.");
 			writer.write<u32>(dif);
 			break;
 		default:
