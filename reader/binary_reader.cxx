@@ -55,30 +55,30 @@ void BinaryReader::warnAt(const char* msg, u32 selectBegin, u32 selectEnd, bool 
 	if (!checkStack)
 		printf("\t\t");
 	
-	for (int i = lineBegin * 16; i < selectBegin; ++i)
+	for (u32 i = lineBegin * 16; i < selectBegin; ++i)
 		printf("   ");
 
 	{
 		ScopedFormatter fmt(0xa);
 
 		printf(selectEnd - selectBegin == 0 ? "^ " : "^~"); // one less, one over below
-		for (int i = selectBegin + 1; i < selectEnd; ++i)
+		for (u32 i = selectBegin + 1; i < selectEnd; ++i)
 			printf("~~~");
 	}
 
-	for (int i = selectEnd; i < lineEnd * 16; ++i)
+	for (u32 i = selectEnd; i < lineEnd * 16; ++i)
 		printf("   ");
 	
 	printf(" ");
 	
-	for (int i = lineBegin * 16; i < selectBegin; ++i)
+	for (u32 i = lineBegin * 16; i < selectBegin; ++i)
 		putchar(' ');
 
 	{
 		ScopedFormatter fmt(0xa);
 
 		putchar('^');
-		for (int i = selectBegin + 1; i < selectEnd; ++i)
+		for (u32 i = selectBegin + 1; i < selectEnd; ++i)
 			putchar('~');
 	}
 	putchar('\n');
@@ -89,7 +89,7 @@ void BinaryReader::warnAt(const char* msg, u32 selectBegin, u32 selectEnd, bool 
 	if (checkStack)
 	{
 		//printf("\tStack Trace\n\t===========\n");
-		for (int i = mStack.mSize - 1; i >= 0; --i)
+		for (s32 i = mStack.mSize - 1; i >= 0; --i)
 		{
 			const auto& entry = mStack.mStack[i];
 			printf("\t\tIn %s: start=0x%X, at=0x%X\n", entry.handlerName ? entry.handlerName : "?", entry.handlerStart, entry.jump);

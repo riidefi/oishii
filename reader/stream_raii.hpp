@@ -32,8 +32,9 @@ struct JumpOut
 		mStream.template seek<W>(back);
 	}
 	T& mStream;
-	u32 back;
+
 	u32 start;
+	u32 back;
 };
 
 template<typename T = BinaryReader>

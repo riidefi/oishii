@@ -55,7 +55,7 @@ public:
 	}
 	u32 endpos() final override
 	{
-		return mBuf->size();
+		return (u32)mBuf->size();
 	}
 
 	// Bound check unlike reader -- can always extend file
@@ -80,7 +80,7 @@ public:
 	}
 	u32 getBufSize()
 	{
-		return mBuf.get() ? mBuf->size() : 0;
+		return mBuf.get() ? (u32)mBuf->size() : 0;
 	}
 };
 

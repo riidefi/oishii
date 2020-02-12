@@ -81,12 +81,12 @@ public:
 					// todo: EndOfChildren
 				case Hook::RelativePosition::Begin:
 				case Hook::RelativePosition::EndOfChildren: // begin of marker node
-					return entry.begin + offset;
+					return (u32)(entry.begin + offset);
 				case Hook::RelativePosition::End:
-					return entry.end + offset;
+					return (u32)(entry.end + offset);
 				default:
 					printf("Linker Error: Unknown hook type %u -- assuming Begin\n", pos);
-					return entry.begin + offset;
+					return (u32)(entry.begin + offset);
 				}
 			}
 		}

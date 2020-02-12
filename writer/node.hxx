@@ -98,8 +98,8 @@ public:
 
 
 protected:
-    LinkingRestriction mLinkingRestriction;
 	std::string mId = ""; //!< String ID. If empty, linker will assign a unique ID.
+	LinkingRestriction mLinkingRestriction;
 	bool bLinkerOwned = false; //!< If this block should be freed upon linking completion.
 
 public:

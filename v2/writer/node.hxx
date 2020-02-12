@@ -124,9 +124,9 @@ public:
 
 
 protected:
-    LinkingRestriction mLinkingRestriction;
 	std::string mId = ""; //!< String ID. If empty, linker will assign a unique ID.
-
+	LinkingRestriction mLinkingRestriction;
+	
 public:
     //! @brief Write this block to a stream.
     //!
