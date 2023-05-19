@@ -1,255 +1,178 @@
 #pragma once
 
-#include "memory_reader.hxx"
-#include "indirection.hxx"
+#include "../VectorStream.hxx"
+#include "../interfaces.hxx"
 #include "../util/util.hxx"
 
-#include <array>
-#include <string>
+#include <core/common.h>
+#include <rsl/DebugBreak.hpp>
+
+// HACK
+extern bool gTestMode;
 
 namespace oishii {
 
-// Trait
-struct Invalidity
-{
-	enum { invality_t };
-};
+template <typename T, EndianSelect E = EndianSelect::Current>
+inline T endianDecode(T val, std::endian fileEndian) {
+  if constexpr (E == EndianSelect::Big) {
+    return std::endian::native != std::endian::big ? swapEndian<T>(val) : val;
+  } else if constexpr (E == EndianSelect::Little) {
+    return std::endian::native != std::endian::little ? swapEndian<T>(val)
+                                                      : val;
+  } else if constexpr (E == EndianSelect::Current) {
+    return std::endian::native != fileEndian ? swapEndian<T>(val) : val;
+  }
 
+  return val;
+}
 
-class BinaryReader final : public MemoryBlockReader
-{
+class BinaryReader final : public VectorStream {
 public:
-	//! @brief The constructor
-	//!
-	//! @param[in] sz Size of the buffer to create.
-	//! @param[in] f  Filename
-	//!
-	BinaryReader(u32 sz, const char* f = "")
-		: MemoryBlockReader(sz), file(f)
-	{}
+  //! Failure type is always `std::string`
+  template <typename T> using Result = std::expected<T, std::string>;
 
-	//! @brief The constructor
-	//!
-	//! @param[in] buf The buffer to manage.
-	//! @param[in] sz  Size of the buffer.
-	//! @param[in] f   Filename
-	//!
-	BinaryReader(std::vector<u8> buf, u32 sz, const char* f = "")
-		: MemoryBlockReader(std::move(buf), sz), file(f)
-	{}
+  //! Read file from memory
+  BinaryReader(std::vector<u8>&& view, std::string_view path,
+               std::endian endian);
+  BinaryReader(std::span<const u8> view, std::string_view path,
+               std::endian endian);
+  BinaryReader(const BinaryReader&) = delete;
+  BinaryReader(BinaryReader&&);
+  ~BinaryReader();
 
-	//! @brief The destructor.
-	//!
-	~BinaryReader() final {}
+  //! Read file from disc
+  static Result<BinaryReader> FromFilePath(std::string_view path,
+                                           std::endian endian);
 
-	//! @brief Given a type T, return T in the specified endiannes. (Current: swap endian if reader endian != sys endian)
-	//!
-	//! @tparam T Type of value to decode and return.
-	//! @tparam E Endian transformation. Current will decode the value based on the endian switch flag
-	//!
-	//! @return T, endian decoded.
-	//!
-	template <typename T, EndianSelect E = EndianSelect::Current>
-	inline T endianDecode(T val) const noexcept;
+  // The |BinaryReader| keeps track of the files endianness
+  std::endian endian() const { return mFileEndian; }
+  void setEndian(std::endian endian) noexcept { mFileEndian = endian; }
 
-	template <typename T, EndianSelect E = EndianSelect::Current, bool unaligned = false>
-	T peek();
-	template <typename T, EndianSelect E = EndianSelect::Current, bool unaligned = false>
-	T read();
-	template<typename T, EndianSelect E = EndianSelect::Current>
-	inline T readUnaligned()
-	{
-		return read<T, E, true>();
-	}
+  // Path of the file or "Unknown path"
+  const char* getFile() const noexcept { return m_path.c_str(); }
 
-	template <typename T, int num = 1, EndianSelect E = EndianSelect::Current, bool unaligned = false>
-	std::array<T, num> readX();
+  //! Get a read-only view of the file
+  std::span<const u8> slice() const { return mBuf; }
 
-	template <typename T, EndianSelect E = EndianSelect::Current, bool unaligned = false>
-	void transfer(T& out)
-	{
-		out = read<T, E, unaligned>();
-	}
+  //! Pop a value from the stream (of type |T|)
+  template <typename T,                             //
+            EndianSelect E = EndianSelect::Current, //
+            bool unaligned = false>
+  Result<T> tryRead();
 
-	template <typename T, EndianSelect E = EndianSelect::Current, bool unaligned = false>
-	T peekAt(int trans);
-	//	template <typename T, EndianSelect E = EndianSelect::Current>
-	//	T readAt();
-	template <typename T, EndianSelect E = EndianSelect::Current, bool unaligned = false>
-	T getAt(int trans)
-	{
-		return peekAt<T, E, unaligned>(trans - tell());
-	}
+  //! Pop |n| values from the stream (each of type |T|)
+  template <typename T, //
+            u32 n>
+  auto tryReadX() -> Result<std::array<T, n>> {
+    std::array<T, n> result;
+    for (auto& r : result) {
+      auto tmp = tryRead<T>();
+      if (!tmp) {
+        return std::unexpected(tmp.error());
+      }
+      r = *tmp;
+    }
+    return result;
+  }
 
+  //! Get a value from an arbitrary point in the file
+  template <typename T,                             //
+            EndianSelect E = EndianSelect::Current, //
+            bool unaligned = false>
+  auto tryGetAt(int trans) -> Result<T> {
+    if (!unaligned && (trans % sizeof(T))) {
+      auto err = std::format("Alignment error: {} is not {}-byte aligned.",
+                             tell(), sizeof(T));
+      if (gTestMode) {
+        fprintf(stderr, "%s\n", err.c_str());
+        rsl::debug_break();
+      }
+      return std::unexpected(err);
+    }
+
+    if (trans < 0 || trans + sizeof(T) > endpos()) {
+      auto err = std::format(
+          "Bounds error: Reading {} bytes from {} exceeds buffer size of {}",
+          sizeof(T), trans, endpos());
+      if (gTestMode) {
+        fprintf(stderr, "%s\n", err.c_str());
+        rsl::debug_break();
+      }
+      return std::unexpected(err);
+    }
+
+    readerBpCheck(sizeof(T), trans - tell());
+    T decoded = endianDecode<T, E>(
+        *reinterpret_cast<const T*>(getStreamStart() + trans), mFileEndian);
+
+    return decoded;
+  }
+
+  struct ScopedRegion {
+    ScopedRegion(BinaryReader& reader, std::string&& name) : mReader(reader) {
+      start = reader.tell();
+      mReader.enterRegion(std::move(name), jump_save, jump_size_save,
+                          reader.tell(), 0);
+    }
+    ~ScopedRegion() { mReader.exitRegion(jump_save, jump_size_save); }
+
+  private:
+    u32 jump_save = 0;
+    u32 jump_size_save = 0;
+
+  public:
+    u32 start = 0;
+    BinaryReader& mReader;
+  };
+
+  //! Create a debug frame
+  auto createScoped(std::string&& region) {
+    return ScopedRegion(*this, std::move(region));
+  }
+
+  //! Print a warning message
+  void warnAt(const char* msg, u32 selectBegin, u32 selectEnd,
+              bool checkStack = true);
+
+  template <typename T>
+  auto tryReadBuffer(u32 size, u32 addr) -> Result<std::vector<T>> {
+    static_assert(sizeof(T) == 1);
+    if (addr + size > endpos()) {
+      rsl::debug_break();
+      return std::unexpected("Buffer read exceeds file length");
+    }
+    readerBpCheck(size, addr - tell());
+    std::vector<T> out(size);
+    std::copy_n(mBuf.begin() + addr, size, out.begin());
+    return out;
+  }
+  template <typename T> auto tryReadBuffer(u32 size) -> Result<std::vector<T>> {
+    auto buf = tryReadBuffer<T>(size, tell());
+    if (!buf) {
+      return std::unexpected(buf.error());
+    }
+    seekSet(tell() + size);
+    return *buf;
+  }
 
 private:
-	template<typename THandler, typename Indirection, typename TContext, bool needsSeekBack = true>
-	inline void invokeIndirection(TContext& ctx, u32 atPool=0);
+  std::endian mFileEndian = std::endian::big;
+  std::string m_path = "Unknown Path";
 
-public:
-	//! @brief Dispatch an indirect data read to a handler.
-	//!
-	//! @tparam THandler		The handler.
-	//! @tparam TIndirection	The sequence necessary to derive the value.
-	//! @tparam seekback		Whether or not the reader should be restored to the end of the first indirection jump.
-	//! @tparam TContext		Type of value to pass to handler.
-	//!
-	template <typename THandler, typename TIndirection = Direct, bool seekBack = true, typename TContext>
-	void dispatch(TContext& ctx, u32 atPool=0);
+  void readerBpCheck(u32 size, s32 trans = 0);
 
-	struct ScopedRegion
-	{
-		ScopedRegion(BinaryReader& reader, const char* name)
-			: mReader(reader)
-		{
-			start = reader.tell();
-			mReader.enterRegion(name, jump_save, jump_size_save, reader.tell(), 0);
-		}
-		~ScopedRegion()
-		{
-			mReader.exitRegion(jump_save, jump_size_save);
-		}
-
-	private:
-		u32 jump_save = 0;
-		u32 jump_size_save = 0;
-	public:
-		u32 start = 0;
-		BinaryReader& mReader;
-	};
-
-	//! @brief Warn that there is an issue in a certain range. Stack trace is read and reported.
-	//!
-	//! @param[in] msg			Message to print
-	//! @param[in] selectBegin	File offset where warning selection begins.
-	//! @param[in] selectEnd	File offset where warning selection ends.
-	//! @param[in] checkStack	Whether or not to output a stack trace. Necessary to prevent infinite recursion.
-	//!
-	void warnAt(const char* msg, u32 selectBegin, u32 selectEnd, bool checkStack = true);
-
-	template<typename lastReadType, typename TInval>
-	void signalInvalidityLast();
-
-	template<typename lastReadType, typename TInval, int = TInval::inval_use_userdata_string>
-	void signalInvalidityLast(const char* userData);
-
-	// Magics are assumed to be 32 bit
-	template<u32 magic, bool critical=true>
-	inline void expectMagic();
-
-
-	void switchEndian() noexcept { bigEndian = !bigEndian; }
-	void setEndian(bool big)	noexcept { bigEndian = big; }
-	bool getIsBigEndian() const noexcept { return bigEndian; }
-
-	const char* getFile() const noexcept { return file; }
-	void setFile(const char* f) noexcept { file = f; }
-
-private:
-	bool bigEndian = true; // to swap
-	const char* file = "?";
-
-	struct DispatchStack
-	{
-		struct Entry
-		{
-			u32 jump; // Offset in stream where jumped
-			u32 jump_sz;
-
-			const char* handlerName; // Name of handler
-			u32 handlerStart; // Start address of handler
-
-		};
-
-		std::array<Entry, 16> mStack;
-		u32 mSize = 0;
-
-		void push_entry(u32 j, const char* name, u32 start = 0)
-		{
-			Entry& cur = mStack[mSize];
-			++mSize;
-
-			cur.jump = j;
-			cur.handlerName = name;
-			cur.handlerStart = start;
-			cur.jump_sz = 1;
-		}
-
-		DispatchStack() = default;
-	};
-
-	DispatchStack mStack;
-	u32 cblockstart = 0; // Start of current block, necessary for dispatch
-
-	
-	void boundsCheck(u32 size, u32 at)
-	{
-		// TODO: Implement
-		if (Options::BOUNDS_CHECK && at + size > endpos())
-		{
-			// warnAt("Out of bounds read...", at, size + at);
-			// Fatal invalidity -- out of space
-			throw "Out of bounds read.";
-		}
-	}
-	void boundsCheck(u32 size) noexcept
-	{
-		boundsCheck(size, tell());
-	}
-	void alignmentCheck(u32 size, u32 at)
-	{
-		if (Options::ALIGNMENT_CHECK && at % size)
-		{
-			// TODO: Filter warnings in same scope, only print stack once.
-			warnAt((std::string("Alignment error: ") + std::to_string(tell()) + " is not " + std::to_string(size) + " byte aligned.").c_str(), at, at + size, true);
-			__debugbreak();
-		}
-	}
-	void alignmentCheck(u32 size)
-	{
-		alignmentCheck(size, tell());
-	}
-	void enterRegion(const char* name, u32& jump_save, u32& jump_size_save, u32 start, u32 size)
-	{
-		//_ASSERT(mStack.mSize < 16);
-		mStack.push_entry(start, name, start);
-
-		// Jump is owned by past block
-		if (mStack.mSize > 1)
-		{
-			jump_save = mStack.mStack[mStack.mSize - 2].jump;
-			jump_size_save = mStack.mStack[mStack.mSize - 2].jump_sz;
-			mStack.mStack[mStack.mSize - 2].jump = start;
-			mStack.mStack[mStack.mSize - 2].jump_sz = size;
-		}
-	}
-	void exitRegion(u32 jump_save, u32 jump_size_save)
-	{
-		if (mStack.mSize > 1)
-		{
-			mStack.mStack[mStack.mSize - 2].jump = jump_save;
-			mStack.mStack[mStack.mSize - 2].jump_sz = jump_size_save;
-		}
-
-		--mStack.mSize;
-	}
-
+  struct DispatchStack;
+  std::unique_ptr<DispatchStack> mStack;
+  void enterRegion(std::string&& name, u32& jump_save, u32& jump_size_save,
+                   u32 start, u32 size);
+  void exitRegion(u32 jump_save, u32 jump_size_save);
 };
 
-
-
-#define READER_HANDLER_DECL(hname, desc, ctx_t) \
-	struct hname { static constexpr char name[] = desc; \
-		static inline void onRead(oishii::BinaryReader& reader, ctx_t ctx); };
-#define READER_HANDLER_IMPL(hname, ctx_t) \
-	void hname::onRead(oishii::BinaryReader& reader, ctx_t ctx)
-#define READER_HANDLER(hname, desc, ctx_t) \
-	READER_HANDLER_DECL(hname, desc, ctx_t) \
-	READER_HANDLER_IMPL(hname, ctx_t)
-
+inline std::span<const u8> SliceStream(oishii::BinaryReader& reader) {
+  return {reader.getStreamStart() + reader.tell(),
+          reader.endpos() - reader.tell()};
+}
 
 } // namespace oishii
 
-#include "binary_reader_impl.hxx"
-#include "invalidities.hxx"
 #include "stream_raii.hpp"
